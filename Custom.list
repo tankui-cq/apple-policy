@@ -1,0 +1,23 @@
+# Quantumult X 自定义分流清单
+#
+# 第三列就是策略，引用时不要加 force-policy。
+# 新增规则直接改这里，QX 里「更新配置」即可生效，不用重新导入配置。
+# 策略名必须和配置 [policy] 里的组名一致；DIRECT / PROXY / REJECT 是内置策略。
+#
+# 刷新 CDN：
+# https://purge.jsdelivr.net/gh/tankui-cq/apple-policy@main/Custom.list
+
+# ── 直连例外
+# 京东短链（推送消息落地页）；jd.com 主站已在「国内网站」清单里
+HOST-SUFFIX,3.cn,DIRECT
+
+# ── 指定走节点（大流量 CDN，按需）
+HOST-KEYWORD,exitgames.com,节点选择
+HOST-SUFFIX,bnbstatic.com,节点选择
+
+# ── ChatGPT / Copilot 兜底（主清单失效时仍有固定出口）
+HOST-SUFFIX,chatgpt.com,🤖 AI Platforms
+HOST-SUFFIX,openai.com,🤖 AI Platforms
+HOST-SUFFIX,oaistatic.com,🤖 AI Platforms
+HOST-SUFFIX,oaiusercontent.com,🤖 AI Platforms
+HOST-SUFFIX,copilot.microsoft.com,🤖 AI Platforms
