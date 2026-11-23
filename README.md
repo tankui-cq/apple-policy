@@ -6,6 +6,7 @@
 |---|---|---|
 | `Apple.list` | 第 1 段 Apple 智能 32 条；第 2 段大流量 29 条直连；第 3 段其余 Apple 域名 1783 条 | 1844 |
 | `Custom.list` | 自定义规则：直连例外、指定走节点、ChatGPT/Copilot 兜底 | 8 |
+| `ClashMi/clashmi-override.yaml` | Clash Mi 自定义覆写：同一套分流的 Clash 版（订阅只管节点，规则钉在覆写里） | 23 组 / 19 规则集 / 1933 条规则 |
 
 ## 三段，顺序即优先级
 
@@ -49,6 +50,27 @@ https://cdn.jsdelivr.net/gh/tankui-cq/apple-policy@main/Custom.list, tag=自定�
 策略组、`FINAL`、私网 IP 仍然只能写在配置里——QX 没有 `[policy_remote]`，而且清单拉取失败时私网规则会一起消失。
 
 走 jsDelivr 是因为 `raw.githubusercontent.com` 在国内不稳定，仓库需要保持 public。
+
+## Clash Mi 覆写
+
+`ClashMi/clashmi-override.yaml` 是同一套分流的 Clash Mi 版：**订阅只负责提供节点，策略组和规则全部固定在覆写里**，订阅刷新、换机场都不会冲掉规则。内容由 `QuanX-20261120-6.conf` 完整转换（23 个策略组、19 个远程规则集、1933 条规则、DNS）。
+
+```ini
+设置 → 核心设置 → 覆写 → ➕ → 添加配置链接
+https://cdn.jsdelivr.net/gh/tankui-cq/apple-policy@main/ClashMi/clashmi-override.yaml
+```
+
+然后 `我的配置 → 编辑配置 → 核心覆写` 选中它；**「编辑配置 → 规则 / 代理组」保持为空**（内置模板覆写会把规则整段顶掉）。
+
+Apple / Unbreak / Custom 三段在覆写里是内联的，上游更新后刷新（在仓库根目录执行）：
+
+```bash
+python ClashMi/qx2clash.py https://cdn.jsdelivr.net/gh/tankui-cq/apple-policy@main/Apple.list  --inject ClashMi/clashmi-override.yaml --marker APPLE
+python ClashMi/qx2clash.py https://cdn.jsdelivr.net/gh/ddgksf2013/Filter@master/Unbreak.list  --inject ClashMi/clashmi-override.yaml --marker UNBREAK
+python ClashMi/qx2clash.py https://cdn.jsdelivr.net/gh/tankui-cq/apple-policy@main/Custom.list --inject ClashMi/clashmi-override.yaml --marker CUSTOM
+```
+
+改自定义规则就直接改 `# >>> GENERATED:CUSTOM` 段，或在 `Custom.list` 里改完跑上面第三条。原理、QX 对照表、与 QX 配置的逐条差异、排错，见 `ClashMi/README.md`。
 
 ## 维护
 
