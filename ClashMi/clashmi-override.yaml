@@ -118,31 +118,31 @@ proxy-groups:
     # 否则它们会出现在手动下拉里，点中会直接断网。
     exclude-filter: "(剩余|到期|流量|群组|群組|Telegram|欢迎|歡迎|官网|官網|套餐|重置|客服|订阅|訂閱|网址|網址|购买|購買)"
     proxies:
-      - 自动选择
       - 美国
-      - 德国
+      - 日本
       - 香港
       - 台湾
-      - 日本
-      - 韩国
       - 新加坡
+      - 韩国
+      - 德国
       - 备用地区
+      - 自动选择
       - DIRECT
 
   - name: 谷歌
     type: select
     icon: https://cdn.jsdelivr.net/gh/Orz-3/mini@master/Color/Google.png
-    proxies: [节点选择, 美国, 日本, 香港, 台湾, 新加坡, DIRECT]
+    proxies: [美国, 日本, 香港, 台湾, 新加坡, 节点选择, DIRECT]
 
   - name: 电报
     type: select
     icon: https://cdn.jsdelivr.net/gh/Orz-3/mini@master/Color/Telegram.png
-    proxies: [节点选择, 美国, 日本, 香港, 台湾, 新加坡, DIRECT]
+    proxies: [美国, 日本, 香港, 台湾, 新加坡, 节点选择, DIRECT]
 
   - name: 国外网站
     type: select
     icon: https://cdn.jsdelivr.net/gh/Orz-3/mini@master/Color/Global.png
-    proxies: [节点选择, 美国, 日本, 香港, 台湾, 新加坡, DIRECT]
+    proxies: [美国, 日本, 香港, 台湾, 新加坡, 节点选择, DIRECT]
 
   # ── 平台专用组
   - name: TikTok
@@ -169,7 +169,7 @@ proxy-groups:
   - name: 漏网之鱼
     type: select
     icon: https://cdn.jsdelivr.net/gh/Orz-3/mini@master/Color/Final.png
-    proxies: [自动选择, 香港, 台湾, 日本, 韩国, 新加坡, 美国, 节点选择, DIRECT]
+    proxies: [美国, 日本, 香港, 台湾, 新加坡, 韩国, 节点选择, 自动选择, DIRECT]
 
   - name: Supercell
     type: select
@@ -189,7 +189,7 @@ proxy-groups:
   - name: 🤖 AI Platforms
     type: select
     icon: https://cdn.jsdelivr.net/gh/Orz-3/mini@master/Color/OpenAI.png
-    proxies: [节点选择, 美国, 日本, 香港, 新加坡, DIRECT]
+    proxies: [美国, 日本, 香港, 新加坡, 节点选择, DIRECT]
 
   - name: 🛑 广告拦截
     type: select
