@@ -1,35 +1,20 @@
 # =============================================================================
-# Clash Mi 自定义覆写（custom override / profile patch）
-# 由 QuanX-20261120-6.conf 完整转换 —— 2026-11-23
-# =============================================================================
-# 用法（详见同目录 README.md）：
-#   1. 正常添加机场订阅（订阅只负责提供节点）
-#   2. 设置 → 核心设置 → 覆写 → ➕ → 导入文件 / 添加配置链接（本文件）
-#   3. 我的配置 → 编辑该订阅 → 核心覆写 → 选中本覆写
-#
-# 层级（官方 FAQ + 源码确认）：原始配置(订阅) <- 自定义覆写(本文件) <- App 内置覆写
-#   - 订阅刷新只换 proxies（节点），本文件的 rules / proxy-groups / rule-providers 不被覆盖
-#   - 本文件不定义 proxies；分组用 include-all + filter 自动吸收订阅里的全部节点
-#
-# 与原 QX 配置的对应关系：
-#   [policy]          -> proxy-groups（server-tag-regex -> filter/exclude-filter）
-#   [filter_remote]   -> rule-providers + RULE-SET（改用 blackmatrix7 的 Clash 版清单）
-#   [filter_local]    -> rules 开头（本地优先，和 QX 一致）
-#   [dns]             -> dns（注意：挂了自定义覆写后 App 的 DNS 设置不再写入，见 README）
-#   [rewrite]/[task]/[mitm]/[http_backend] -> 无对应（QX 专属，且你全部 enabled=false）
+# Clash Mi 自定义覆写
+# BUILD: 2026-11-25 16:34 CST | TAG: v20261125-2 | 23 组 / 25 规则集 / 1948 条
+# 用法：设置 → 核心设置 → 覆写 → 添加配置链接或导入本文件 → 挂到订阅
+# 订阅只提供节点；本文件不定义 proxies，分组用 include-all + filter
 # =============================================================================
 
 # ---------------------------------------------------------------------------
 # 策略组
 # ---------------------------------------------------------------------------
 proxy-groups:
-  # ── 测速组（QX: url-latency-benchmark + server-tag-regex）
+  # ── 测速组
   - name: 自动选择
     type: url-test
     icon: https://cdn.jsdelivr.net/gh/Orz-3/mini@master/Color/Urltest.png
     include-all: true
-    # QX 是 ^(?!.*(剩余|到期|...)).*$ 反向断言；Go 正则不支持 lookahead，
-    # 这里用 mihomo 自带的 exclude-filter，语义等价：名字含这些词的伪节点全部剔除
+    # 剔除「剩余流量/到期/官网」等伪节点（Go 正则不支持 lookahead，用 exclude-filter）
     exclude-filter: "(剩余|到期|流量|群组|群組|Telegram|欢迎|歡迎|官网|官網|套餐|重置|客服|订阅|訂閱|网址|網址|购买|購買)"
     url: https://www.gstatic.com/generate_204
     interval: 900
@@ -102,20 +87,18 @@ proxy-groups:
     type: url-test
     icon: https://cdn.jsdelivr.net/gh/Orz-3/mini@master/Color/Global.png
     include-all: true
-    # 机场常用 Priority / 备用 / Backup 命名，这里一并匹配，避免整组为空
+    # Priority / 备用 / Backup 节点
     filter: "(?i)(priority|备用|備用|backup|fallback)"
     url: https://www.gstatic.com/generate_204
     interval: 1800
     tolerance: 100
 
-  # ── 手动选择组（QX: static）
-  # include-all：比 QX 多一个「手动直接选具体节点」的能力，其余成员与顺序不变
+  # ── 手动选择组
   - name: 节点选择
     type: select
     icon: https://cdn.jsdelivr.net/gh/Orz-3/mini@master/Color/Static.png
     include-all: true
-    # 与「自动选择」一致：剔除「剩余流量/到期/官网」等伪节点，
-    # 否则它们会出现在手动下拉里，点中会直接断网。
+    # 同上：剔除伪节点
     exclude-filter: "(剩余|到期|流量|群组|群組|Telegram|欢迎|歡迎|官网|官網|套餐|重置|客服|订阅|訂閱|网址|網址|购买|購買)"
     proxies:
       - 美国
@@ -197,7 +180,7 @@ proxy-groups:
     proxies: [REJECT, 节点选择, DIRECT]
 
 # ---------------------------------------------------------------------------
-# 远程规则集（全部为 Clash 格式；间隔沿用 QX 的 update-interval，单位同为秒）
+# 远程规则集
 # ---------------------------------------------------------------------------
 rule-providers:
   wechat:
@@ -232,8 +215,7 @@ rule-providers:
     path: ./rules/ads-lite.yaml
     interval: 604800
 
-  # blackmatrix7 的大清单拆成两份：X.yaml 只放关键词/IP 等，
-  # "域名主体"在 X_Domain.yaml。必须两份一起挂，否则几万条域名广告规则不生效。
+  # 域名主体（必须与上面的 ads-lite 一起挂）
   ads-lite-domain:
     type: http
     behavior: domain
@@ -298,7 +280,7 @@ rule-providers:
     path: ./rules/netflix.yaml
     interval: 172800
 
-  # Netflix 的 IP 段单独发布（behavior: ipcidr，裸 CIDR）
+  # Netflix IP 段
   netflix-ip:
     type: http
     behavior: ipcidr
@@ -355,7 +337,7 @@ rule-providers:
     path: ./rules/microsoft.yaml
     interval: 172800
 
-  # 通用国外域名（Loyalsoldier proxy，约 2.7 万条；纯域名，没有 amazon/google 这类宽泛关键词）
+  # 国外通用域名（Loyalsoldier，纯域名、无宽泛关键词）
   proxy:
     type: http
     behavior: domain
@@ -364,7 +346,7 @@ rule-providers:
     path: ./rules/proxy.yaml
     interval: 86400
 
-  # 局域网 / 路由器管理域名（Loyalsoldier private）
+  # 局域网 / 路由器管理域名
   private:
     type: http
     behavior: domain
@@ -373,7 +355,7 @@ rule-providers:
     path: ./rules/private.yaml
     interval: 86400
 
-  # Telegram IP 段（Loyalsoldier）
+  # Telegram IP 段
   telegramcidr:
     type: http
     behavior: ipcidr
@@ -390,7 +372,7 @@ rule-providers:
     path: ./rules/china.yaml
     interval: 172800
 
-  # 同上：China 的 3.7 千条域名在 China_Domain.yaml
+  # China 域名主体
   china-domain:
     type: http
     behavior: domain
@@ -399,8 +381,7 @@ rule-providers:
     path: ./rules/china-domain.yaml
     interval: 172800
 
-  # 中国 IP 段（Loyalsoldier，约 9.6k CIDR，ipcidr 结构很省内存）。
-  # 主流做法：域名直连表 + 中国 IP 段 + GEOIP 三层，避免只靠 GEOIP 时库缺失/过期导致国内站被送进代理。
+  # 中国 IP 段（不依赖 GeoIP 库）
   cncidr:
     type: http
     behavior: ipcidr
@@ -410,7 +391,7 @@ rule-providers:
     interval: 86400
 
 # ---------------------------------------------------------------------------
-# 规则（顺序 = QX 的优先级：本地 > 远程清单顺序）
+# 规则（本地优先，然后按清单顺序）
 # ---------------------------------------------------------------------------
 rules:
   # ── [filter_local] 本机 / 内网
@@ -427,32 +408,30 @@ rules:
   - 'IP-CIDR6,ff00::/8,DIRECT,no-resolve'
   - 'IP-CIDR6,::1/128,DIRECT,no-resolve'
 
-  # 局域网 / 路由器管理域名（Loyalsoldier private）
+  # 局域网 / 路由器管理域名
   - 'RULE-SET,private,DIRECT'
 
-  # ── 与远程清单撞车的本地修正（本地优先，放在远程之前一定生效）
+  # ── 本地修正（优先于远程清单）
   - 'DOMAIN-SUFFIX,sentry.io,DIRECT'
   - 'DOMAIN-SUFFIX,crashlytics.com,DIRECT'
   - 'DOMAIN-SUFFIX,apps.mzstatic.com,DIRECT'
   - 'DOMAIN-SUFFIX,akadns.net,DIRECT'
 
-  # ── 国内站直连不再逐个加白名单：
-  # 由 cncidr（中国 IP 段）+ DOMAIN-SUFFIX,cn + GEOIP,CN 三层兜底（对齐 ACL4SSR / Loyalsoldier）
+  # ── 国内站由 cncidr + .cn + GEOIP 三层兜底，不逐个加白名单
 
-  # ── NTP 直连（UDP 123 经代理节点经常不通，尤其 anytls 这类纯 TCP 节点）
+  # ── NTP 直连（UDP 123 经代理常不通）
   - 'DOMAIN,time.apple.com,DIRECT'
   - 'DOMAIN,time-ios.apple.com,DIRECT'
   - 'DOMAIN,time-macos.apple.com,DIRECT'
 
-  # ── 收敛 Apple.list 里过宽的 DOMAIN-SUFFIX,digicert.com：
-  # 只把 Apple 相关的 OCSP/CRL 入口送「苹果服务」，其余 DigiCert 直连
+  # ── digicert：只把 Apple 的 OCSP/CRL 送「苹果服务」，其余直连
   - 'DOMAIN,ocsp.digicert.com,🍎 苹果服务'
   - 'DOMAIN,crl3.digicert.com,🍎 苹果服务'
   - 'DOMAIN,crl4.digicert.com,🍎 苹果服务'
   - 'DOMAIN,cacerts.digicert.com,🍎 苹果服务'
   - 'DOMAIN-SUFFIX,digicert.com,DIRECT'
 
-  # ── 反劫持清单误伤的正规厂商中国站（原样照搬）
+  # ── 反劫持清单误伤的正规厂商（直连）
   - 'DOMAIN-SUFFIX,ultraiso.net,DIRECT'
   - 'DOMAIN-SUFFIX,coreldrawchina.com,DIRECT'
   - 'DOMAIN-SUFFIX,huishenghuiying.com.cn,DIRECT'
@@ -486,12 +465,12 @@ rules:
   - 'DOMAIN-SUFFIX,codesoftchina.com,DIRECT'
   - 'DOMAIN-SUFFIX,chemdraw.com.cn,DIRECT'
 
-  # ── [filter_remote] 顺序即优先级
+  # ── 顺序即优先级
   # 直连 / 游戏例外
   - 'RULE-SET,wechat,DIRECT'
   - 'RULE-SET,supercell,Supercell'
 
-  # 直连修正（ddgksf2013 Unbreak，34 条，内联；见 README 如何刷新）
+  # 直连修正（Unbreak 内联）
   # >>> GENERATED:UNBREAK
   - 'DOMAIN-SUFFIX,umiwi.com,DIRECT'
   - 'DOMAIN,app.adjust.com,DIRECT'
@@ -529,7 +508,7 @@ rules:
   - 'DOMAIN-SUFFIX,stats.qiumibao.com,DIRECT'
   # <<< GENERATED:UNBREAK
 
-  # 自定义（tankui-cq/apple-policy -> Custom.list，内联；改规则直接改这段）
+  # 自定义（Custom 内联）
   # >>> GENERATED:CUSTOM
   - 'DOMAIN-SUFFIX,3.cn,DIRECT'
   - 'DOMAIN-KEYWORD,exitgames.com,节点选择'
@@ -547,7 +526,7 @@ rules:
   - 'RULE-SET,ads-lite-domain,🛑 广告拦截'
   - 'RULE-SET,awavenue,🛑 广告拦截'
 
-  # Apple（原 Apple.list 三段：AI -> 大流量 DIRECT -> 服务，保持原文件顺序内联）
+  # Apple 三段（AI → 直连 → 服务）
   # >>> GENERATED:APPLE
   - 'DOMAIN,api-siri-prod.apple.com,🍎 Apple 智能'
   - 'DOMAIN,bag.itunes.apple.com,🍎 Apple 智能'
@@ -2386,7 +2365,7 @@ rules:
   - 'RULE-SET,spotify,Spotify'
   - 'RULE-SET,twitter,X'
 
-  # .cn 域名结构性直连（放在 Apple / 专用服务之后，不影响它们的特殊策略）
+  # .cn 直连（放在 Apple 之后）
   - 'DOMAIN-SUFFIX,cn,DIRECT'
 
   # 大厂
@@ -2398,21 +2377,18 @@ rules:
   - 'RULE-SET,china,DIRECT'
   - 'RULE-SET,china-domain,DIRECT'
 
-  # 国内 IP 段兜底（对齐 ACL4SSR ChinaIp / Loyalsoldier cncidr，不依赖 GeoIP 库）
+  # 国内 IP 段
   - 'RULE-SET,cncidr,DIRECT'
-  # GEOIP 再兜一层（需要 GeoIP 库；上面 cncidr 已覆盖绝大多数国内 IP）
+  # GEOIP 兜底
   - 'GEOIP,CN,DIRECT'
 
-  # 只丢弃「本来要交给代理」的 QUIC：国内直连（含 GEOIP 命中的）已在上面 DIRECT，不会走到这里
-  # 用 hysteria2/tuic 想全量跑 QUIC，删掉这一行
+  # 只丢弃走代理的 QUIC；国内直连不受影响（用 hysteria2/tuic 跑 QUIC 可删）
   - 'AND,((NETWORK,UDP),(DST-PORT,443)),REJECT'
 
   - 'MATCH,漏网之鱼'
 
 # ---------------------------------------------------------------------------
-# DNS
-# 注意：挂了自定义覆写后，App「核心设置-DNS」里的配置不会写进最终配置
-#      （源码 defaultConfigNoOverwrite 里 DNS=null），所以 DNS 必须写在这里。
+# DNS（挂覆写后 App 里的 DNS 设置不生效，必须写在这里）
 # ---------------------------------------------------------------------------
 dns:
   enable: true
@@ -2437,7 +2413,7 @@ dns:
     - 'melogin.cn'
     - 'falogin.cn'
     - '+.local'
-    # 以下为 mihomo 内置默认 fake-ip-filter 的常用项（自定义列表会整体覆盖默认值）
+    # mihomo 默认 fake-ip-filter 常用项
     - '+.lan'
     - '+.msftconnecttest.com'
     - '+.msftncsi.com'
@@ -2449,13 +2425,13 @@ dns:
   nameserver:                     # QX: server=223.5.5.5 / server=119.29.29.29
     - 223.5.5.5
     - 119.29.29.29
-  # 解析机场节点域名专用：用国内加密 DNS（可达性优先；若机场域名被污染再换境外 DoH）
+  # 节点域名解析（国内加密 DNS）
   proxy-server-nameserver:
     - https://dns.alidns.com/dns-query
     - https://doh.pub/dns-query
     - 223.5.5.5
   nameserver-policy:
-    # QX: server=/dl.google.com/223.5.5.5 等（Google 下载/更新走国内 CDN）
+    # Google 下载/更新走国内 CDN
     '+.dl.google.com': [223.5.5.5, 119.29.29.29]
     '+.dl.l.google.com': [223.5.5.5, 119.29.29.29]
     '+.update.googleapis.com': [223.5.5.5, 119.29.29.29]

@@ -114,7 +114,7 @@ python qx2clash.py https://cdn.jsdelivr.net/gh/tankui-cq/apple-policy@main/Custo
 - 改自定义规则：直接改 `# >>> GENERATED:CUSTOM` 段（或改仓库里的 `Custom.list` 再跑一次脚本），
   然后重进 Clash Mi 更新覆写即可 —— 和 QX 里「改 Custom.list + 更新配置」的流程一致。
 - 把覆写文件推到仓库后用「添加配置链接」挂载：
-  `https://cdn.jsdelivr.net/gh/tankui-cq/apple-policy@v20261125-1/ClashMi/clashmi-override.yaml`
+  `https://cdn.jsdelivr.net/gh/tankui-cq/apple-policy@v20261125-2/ClashMi/clashmi-override.yaml`
   ⚠️ jsdelivr 的 `@main` 分支别名会缓存约 12 小时，`purge.jsdelivr.net` 也刷不掉别名解析；
   用 **tag**（或 pinned commit）URL 才能立即拿到新版本。每次改完配置会打一个新 tag。
 - **iOS 内存**：官方 FAQ 提到 iOS 有内存上限，规则太多会「连上就断」。这里已经把最大的一份（ChinaIPs 1.9 万条）
