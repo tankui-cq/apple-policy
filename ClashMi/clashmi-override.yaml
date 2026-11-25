@@ -407,15 +407,22 @@ rules:
   - 'IP-CIDR6,ff00::/8,DIRECT,no-resolve'
   - 'IP-CIDR6,::1/128,DIRECT,no-resolve'
 
-  # ── QX udp_drop_list = 443：丢弃 QUIC，逼回 TCP（anytls 等不转发 UDP）
-  # 用 hysteria2/tuic 节点想跑 QUIC 就删掉这一行
-  - 'AND,((NETWORK,UDP),(DST-PORT,443)),REJECT'
-
   # ── 与远程清单撞车的本地修正（本地优先，放在远程之前一定生效）
   - 'DOMAIN-SUFFIX,sentry.io,DIRECT'
   - 'DOMAIN-SUFFIX,crashlytics.com,DIRECT'
   - 'DOMAIN-SUFFIX,apps.mzstatic.com,DIRECT'
   - 'DOMAIN-SUFFIX,akadns.net,DIRECT'
+
+  # ── 蜜雪冰城 App / H5：显式直连，不依赖 GEOIP
+  - 'DOMAIN-SUFFIX,mxbc.com,DIRECT'
+  - 'DOMAIN-SUFFIX,mxbc.com.cn,DIRECT'
+  - 'DOMAIN-SUFFIX,mixuebingcheng.com,DIRECT'
+  - 'DOMAIN-KEYWORD,mxbc,DIRECT'
+  - 'DOMAIN-KEYWORD,mixue,DIRECT'
+
+  # ── 被 Global / Google 关键词误抓的国内站
+  - 'DOMAIN-SUFFIX,amazon.cn,DIRECT'
+  - 'DOMAIN-SUFFIX,google.cn,DIRECT'
 
   # ── NTP 直连（UDP 123 经代理节点经常不通，尤其 anytls 这类纯 TCP 节点）
   - 'DOMAIN,time.apple.com,DIRECT'
@@ -2375,6 +2382,10 @@ rules:
 
   # 国内 IP 兜底（QX 的 ChinaIPs.list，用内置 GEOIP 等价；只在前面全都没命中时才解析域名）
   - 'GEOIP,CN,DIRECT'
+
+  # 只丢弃「本来要交给代理」的 QUIC：国内直连（含 GEOIP 命中的）已在上面 DIRECT，不会走到这里
+  # 用 hysteria2/tuic 想全量跑 QUIC，删掉这一行
+  - 'AND,((NETWORK,UDP),(DST-PORT,443)),REJECT'
 
   - 'MATCH,漏网之鱼'
 
