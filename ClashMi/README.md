@@ -7,7 +7,7 @@
 
 | 文件 | 作用 |
 |---|---|
-| `clashmi-override.yaml` | **主文件**。Clash Mi「自定义覆写」：23 个策略组 + 24 个远程规则集 + 1947 条规则 + DNS |
+| `clashmi-override.yaml` | **主文件**。Clash Mi「自定义覆写」：23 个策略组 + 25 个远程规则集 + 1948 条规则 + DNS |
 | `qx2clash.py` | 把 QX 格式清单转成 Clash 规则行的转换器，并原地刷新覆写文件里的生成段 |
 | `README.md` | 本文件 |
 
@@ -96,6 +96,9 @@
 12. **本地修正了两处上游过宽/不合适的规则**：
     - `time.apple.com` / `time-ios.apple.com` / `time-macos.apple.com` 显式 DIRECT（NTP 走 UDP，经代理常不通）；
     - `DOMAIN-SUFFIX,digicert.com` 收敛为只把 `ocsp/crl3/crl4/cacerts.digicert.com` 送「苹果服务」，其余直连。
+13. **通用国外层改用主流清单**：`Global` + `Global_Domain`（blackmatrix7，含 `DOMAIN-KEYWORD,amazon/google`
+    这类宽泛关键词）换成 Loyalsoldier `proxy`（约 2.7 万条纯域名）；另外补 `private`（局域网/路由器管理域名）
+    和 `telegramcidr`（Telegram IP 段）。这样不会再因为关键词把 `amazon.cn` / `google.cn` 这类国内站误判到代理。
 
 ## 维护
 

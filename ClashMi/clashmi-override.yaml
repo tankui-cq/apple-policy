@@ -355,22 +355,32 @@ rule-providers:
     path: ./rules/microsoft.yaml
     interval: 172800
 
-  global:
-    type: http
-    behavior: classical
-    format: yaml
-    url: https://cdn.jsdelivr.net/gh/blackmatrix7/ios_rule_script@master/rule/Clash/Global/Global.yaml
-    path: ./rules/global.yaml
-    interval: 172800
-
-  # 同上：Global 的 3.5 万条域名在 Global_Domain.yaml
-  global-domain:
+  # 通用国外域名（Loyalsoldier proxy，约 2.7 万条；纯域名，没有 amazon/google 这类宽泛关键词）
+  proxy:
     type: http
     behavior: domain
     format: yaml
-    url: https://cdn.jsdelivr.net/gh/blackmatrix7/ios_rule_script@master/rule/Clash/Global/Global_Domain.yaml
-    path: ./rules/global-domain.yaml
-    interval: 172800
+    url: https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/proxy.txt
+    path: ./rules/proxy.yaml
+    interval: 86400
+
+  # 局域网 / 路由器管理域名（Loyalsoldier private）
+  private:
+    type: http
+    behavior: domain
+    format: yaml
+    url: https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/private.txt
+    path: ./rules/private.yaml
+    interval: 86400
+
+  # Telegram IP 段（Loyalsoldier）
+  telegramcidr:
+    type: http
+    behavior: ipcidr
+    format: yaml
+    url: https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/telegramcidr.txt
+    path: ./rules/telegramcidr.yaml
+    interval: 86400
 
   china:
     type: http
@@ -416,6 +426,9 @@ rules:
   - 'IP-CIDR6,fc00::/7,DIRECT,no-resolve'
   - 'IP-CIDR6,ff00::/8,DIRECT,no-resolve'
   - 'IP-CIDR6,::1/128,DIRECT,no-resolve'
+
+  # 局域网 / 路由器管理域名（Loyalsoldier private）
+  - 'RULE-SET,private,DIRECT'
 
   # ── 与远程清单撞车的本地修正（本地优先，放在远程之前一定生效）
   - 'DOMAIN-SUFFIX,sentry.io,DIRECT'
@@ -2369,6 +2382,7 @@ rules:
   - 'RULE-SET,netflix-ip,奈迪,no-resolve'
   - 'RULE-SET,disney,奈迪'
   - 'RULE-SET,telegram,电报'
+  - 'RULE-SET,telegramcidr,电报'
   - 'RULE-SET,spotify,Spotify'
   - 'RULE-SET,twitter,X'
 
@@ -2380,8 +2394,7 @@ rules:
   - 'RULE-SET,microsoft,DIRECT'
 
   # 通用 / 国内
-  - 'RULE-SET,global,国外网站'
-  - 'RULE-SET,global-domain,国外网站'
+  - 'RULE-SET,proxy,国外网站'
   - 'RULE-SET,china,DIRECT'
   - 'RULE-SET,china-domain,DIRECT'
 
