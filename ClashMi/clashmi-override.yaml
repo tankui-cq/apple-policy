@@ -389,6 +389,16 @@ rule-providers:
     path: ./rules/china-domain.yaml
     interval: 172800
 
+  # 中国 IP 段（Loyalsoldier，约 9.6k CIDR，ipcidr 结构很省内存）。
+  # 主流做法：域名直连表 + 中国 IP 段 + GEOIP 三层，避免只靠 GEOIP 时库缺失/过期导致国内站被送进代理。
+  cncidr:
+    type: http
+    behavior: ipcidr
+    format: yaml
+    url: https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/cncidr.txt
+    path: ./rules/cncidr.yaml
+    interval: 86400
+
 # ---------------------------------------------------------------------------
 # 规则（顺序 = QX 的优先级：本地 > 远程清单顺序）
 # ---------------------------------------------------------------------------
@@ -413,16 +423,8 @@ rules:
   - 'DOMAIN-SUFFIX,apps.mzstatic.com,DIRECT'
   - 'DOMAIN-SUFFIX,akadns.net,DIRECT'
 
-  # ── 蜜雪冰城 App / H5：显式直连，不依赖 GEOIP
-  - 'DOMAIN-SUFFIX,mxbc.com,DIRECT'
-  - 'DOMAIN-SUFFIX,mxbc.com.cn,DIRECT'
-  - 'DOMAIN-SUFFIX,mixuebingcheng.com,DIRECT'
-  - 'DOMAIN-KEYWORD,mxbc,DIRECT'
-  - 'DOMAIN-KEYWORD,mixue,DIRECT'
-
-  # ── 被 Global / Google 关键词误抓的国内站
-  - 'DOMAIN-SUFFIX,amazon.cn,DIRECT'
-  - 'DOMAIN-SUFFIX,google.cn,DIRECT'
+  # ── 国内站直连不再逐个加白名单：
+  # 由 cncidr（中国 IP 段）+ DOMAIN-SUFFIX,cn + GEOIP,CN 三层兜底（对齐 ACL4SSR / Loyalsoldier）
 
   # ── NTP 直连（UDP 123 经代理节点经常不通，尤其 anytls 这类纯 TCP 节点）
   - 'DOMAIN,time.apple.com,DIRECT'
@@ -2370,6 +2372,9 @@ rules:
   - 'RULE-SET,spotify,Spotify'
   - 'RULE-SET,twitter,X'
 
+  # .cn 域名结构性直连（放在 Apple / 专用服务之后，不影响它们的特殊策略）
+  - 'DOMAIN-SUFFIX,cn,DIRECT'
+
   # 大厂
   - 'RULE-SET,google,谷歌'
   - 'RULE-SET,microsoft,DIRECT'
@@ -2380,7 +2385,9 @@ rules:
   - 'RULE-SET,china,DIRECT'
   - 'RULE-SET,china-domain,DIRECT'
 
-  # 国内 IP 兜底（QX 的 ChinaIPs.list，用内置 GEOIP 等价；只在前面全都没命中时才解析域名）
+  # 国内 IP 段兜底（对齐 ACL4SSR ChinaIp / Loyalsoldier cncidr，不依赖 GeoIP 库）
+  - 'RULE-SET,cncidr,DIRECT'
+  # GEOIP 再兜一层（需要 GeoIP 库；上面 cncidr 已覆盖绝大多数国内 IP）
   - 'GEOIP,CN,DIRECT'
 
   # 只丢弃「本来要交给代理」的 QUIC：国内直连（含 GEOIP 命中的）已在上面 DIRECT，不会走到这里

@@ -7,7 +7,7 @@
 
 | 文件 | 作用 |
 |---|---|
-| `clashmi-override.yaml` | **主文件**。Clash Mi「自定义覆写」：23 个策略组 + 23 个远程规则集 + 1945 条规则 + DNS |
+| `clashmi-override.yaml` | **主文件**。Clash Mi「自定义覆写」：23 个策略组 + 24 个远程规则集 + 1947 条规则 + DNS |
 | `qx2clash.py` | 把 QX 格式清单转成 Clash 规则行的转换器，并原地刷新覆写文件里的生成段 |
 | `README.md` | 本文件 |
 
@@ -71,16 +71,18 @@
 2. **「自动选择」的排除正则**：QX 用的是 `^(?!.*(剩余|到期|…)).*$` 负向断言，Go 正则不支持，
    改成内核自带的 `exclude-filter:`，语义相同（名字含这些词的伪节点全部剔除）。
    若你的版本仍把「剩余/到期」混进组里，说明 `exclude-filter` 没生效，改成白名单 `filter:`。
-3. **ChinaIPs.list → `GEOIP,CN,DIRECT`**。位置一样（所有规则之后），行为一样（只有前面全没命中的域名才解析 IP），
-   但省掉一个 1.9 万行的规则集下载，iOS 内存友好。想严格用清单就换回
-   `rule-providers: ChinaIPs`（blackmatrix7 的 Clash 版是 `rule/Clash/ChinaIPs/ChinaIPs.list`，`format: text`）。
+3. **国内兜底改成三层**（对齐 ACL4SSR / Loyalsoldier）：`china` / `china-domain`（域名）
+   → `cncidr`（Loyalsoldier，约 9.6k 条中国 IP 段，`behavior: ipcidr`）→ `GEOIP,CN,DIRECT`。
+   只靠 `GEOIP` 时，一旦 GeoIP 库缺失/过期，未收录的国内站就会掉进代理（蜜雪冰城 App/H5 就是这样）。
+   `ipcidr` 规则集在 mihomo 里是合并后的 CIDR 集合，内存占用很小。
 4. **`fallback_udp_policy = direct` 无对应**：mihomo 的 UDP 由节点协议决定，能转发就转发。
 5. **`circumvent-ipv4-answer`（DNS 污染应答 IP 表）无对应**：mihomo 无此机制；fake-ip + 远程解析已经绕开大部分污染。
 6. **Supercell 规则改了明确目标**：QX 那条远程清单没写 `force-policy`，靠清单自带策略列；
    这里明确指向 `Supercell` 组（成员 `DIRECT, 节点选择, REJECT`，默认直连）。
 7. **`节点选择` 多了 `include-all`**：QX 里只能靠测速组自动选，现在可以在组里手动点具体节点。其余成员与顺序不变。
    同时给它加了与「自动选择」相同的 `exclude-filter`，避免「剩余流量/到期」等伪节点混进下拉。
-8. **QUIC 丢弃规则**：原样保留 `udp_drop_list = 443`。以后用 hysteria2/tuic 想跑 QUIC，把那一行 `AND…REJECT` 删掉。
+8. **QUIC 丢弃规则**：从最前面移到 `GEOIP,CN` 之后、`MATCH` 之前——只丢弃「本来要交给代理」的 QUIC，
+   国内直连的 HTTP/3 不再被误杀。用 hysteria2/tuic 想全量跑 QUIC，删掉那一行 `AND…REJECT`。
 9. **Apple / Unbreak / Custom 三段内联了**（1821 + 34 + 8 条）。原 QX 是远程拉取，现在写在覆写文件里：
    好处是不用额外托管、不会因为 CDN 抽风丢规则；代价是上游更新要跑一次脚本（见下）。
    blackmatrix7 的清单仍是远程自动更新（间隔沿用 QX 的 update-interval，单位都是秒）。
