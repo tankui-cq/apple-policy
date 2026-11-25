@@ -19,12 +19,14 @@ qx2clash.py —— Quantumult X 清单(.list/conf 片段) 转 Clash/mihomo 规�
 转换规则：
   HOST            -> DOMAIN
   HOST-SUFFIX     -> DOMAIN-SUFFIX
+  HOST-SUFFIX-REGEX -> DOMAIN-REGEX（QX 本身就是正则，只补 ^ $ 整串锚定）
   HOST-KEYWORD    -> DOMAIN-KEYWORD
   HOST-WILDCARD   -> DOMAIN-REGEX（glob 转正则，整串锚定）
   IP-CIDR         -> IP-CIDR,...,no-resolve
   IP6-CIDR        -> IP-CIDR6,...,no-resolve
   USER-AGENT      -> 丢弃（mihomo 没有 UA 规则；QX 侧未开 MITM 时这些规则本来也不生效）
   第三列策略      -> 原样作为目标策略组；direct/proxy/reject 映射为 DIRECT/节点选择/REJECT
+  第 4 列起        -> no-resolve / force-remote-dns 等标志位，原样保留
 """
 import argparse
 import re
@@ -45,6 +47,9 @@ POLICY_MAP = {
 }
 
 IP_RULE_TYPES = {"IP-CIDR", "IP6-CIDR", "IP-CIDR6"}
+
+# QX 规则里可能出现在策略列之后的标志位
+POLICY_FLAGS = {"no-resolve", "force-remote-dns", "pre-matching"}
 
 
 def fetch(src: str) -> str:
@@ -86,14 +91,20 @@ def convert(text: str):
             stats["dropped_ua"] += 1
             continue
 
+        is_suffix_regex = False
+        is_glob = False
         if rtype == "HOST":
             new_type = "DOMAIN"
-        elif rtype in ("HOST-SUFFIX", "HOST-SUFFIX-REGEX"):
+        elif rtype == "HOST-SUFFIX":
             new_type = "DOMAIN-SUFFIX"
+        elif rtype == "HOST-SUFFIX-REGEX":
+            new_type = "DOMAIN-REGEX"
+            is_suffix_regex = True
         elif rtype == "HOST-KEYWORD":
             new_type = "DOMAIN-KEYWORD"
         elif rtype == "HOST-WILDCARD":
             new_type = "DOMAIN-REGEX"
+            is_glob = True
         elif rtype in IP_RULE_TYPES:
             new_type = "IP-CIDR6" if "6" in rtype else "IP-CIDR"
         elif rtype in ("DOMAIN", "DOMAIN-SUFFIX", "DOMAIN-KEYWORD", "DOMAIN-REGEX"):
@@ -105,19 +116,32 @@ def convert(text: str):
         if len(parts) < 2:
             continue
         value = parts[1]
-        policy = parts[-1] if len(parts) >= 3 else ""
-        if len(parts) < 3 or not policy:
+        # 第 3 列起可能混着 no-resolve / force-remote-dns 等标志位：
+        # 策略取第一个非标志位；一个都没有就默认 DIRECT
+        rest = parts[2:]
+        flags = [x for x in rest if x.lower() in POLICY_FLAGS]
+        policy = next((x for x in rest if x.lower() not in POLICY_FLAGS), "")
+        if not policy:
             policy = "DIRECT"
             stats["no_policy"] += 1
         policy = POLICY_MAP.get(policy.lower(), POLICY_MAP.get(policy, policy))
 
         if new_type == "DOMAIN-REGEX":
-            value = glob_to_regex(value)
+            if is_glob:
+                value = glob_to_regex(value)
+            elif is_suffix_regex:
+                # QX host-suffix-regex 本身就是正则，只补整串锚定，避免子串误伤
+                if not value.startswith("^"):
+                    value = "^" + value
+                if not value.endswith("$"):
+                    value = value + "$"
 
-        if new_type in ("IP-CIDR", "IP-CIDR6"):
-            rules.append(f"{new_type},{value},{policy},no-resolve")
-        else:
-            rules.append(f"{new_type},{value},{policy}")
+        if new_type in ("IP-CIDR", "IP-CIDR6") and not any(
+            f.lower() == "no-resolve" for f in flags
+        ):
+            flags.append("no-resolve")
+        tail = ("," + ",".join(flags)) if flags else ""
+        rules.append(f"{new_type},{value},{policy}{tail}")
     return rules, stats
 
 

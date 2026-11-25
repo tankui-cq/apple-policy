@@ -7,7 +7,7 @@
 
 | 文件 | 作用 |
 |---|---|
-| `clashmi-override.yaml` | **主文件**。Clash Mi「自定义覆写」：23 个策略组 + 19 个远程规则集 + 1933 条规则 + DNS |
+| `clashmi-override.yaml` | **主文件**。Clash Mi「自定义覆写」：23 个策略组 + 23 个远程规则集 + 1945 条规则 + DNS |
 | `qx2clash.py` | 把 QX 格式清单转成 Clash 规则行的转换器，并原地刷新覆写文件里的生成段 |
 | `README.md` | 本文件 |
 
@@ -52,7 +52,7 @@
 | `[policy] static=` | `type: select` + `proxies:` |
 | `url-latency-benchmark= + server-tag-regex` | `type: url-test` + `include-all` + `filter`（`check-interval`→`interval`，`tolerance` 不变） |
 | `img-url=` | `icon:` |
-| `[filter_remote] force-policy=` + 清单 | `rule-providers`（blackmatrix7 的 **Clash 版** `rule/Clash/*.yaml`）+ `RULE-SET,name,策略组` |
+| `[filter_remote] force-policy=` + 清单 | `rule-providers`（blackmatrix7 的 **Clash 版** `rule/Clash/*.yaml`）+ `RULE-SET,name,策略组`。注意大清单是拆开发布的：`X.yaml` 只含关键词/IP，域名主体在 `X_Domain.yaml`（`behavior: domain`），两份都要挂 |
 | `[filter_local]` | `rules:` 开头（本地优先，和 QX 一致） |
 | `HOST-SUFFIX / HOST / HOST-KEYWORD` | `DOMAIN-SUFFIX / DOMAIN / DOMAIN-KEYWORD` |
 | `HOST-WILDCARD` | `DOMAIN-REGEX`（glob 转正则，已锚定） |
@@ -79,19 +79,28 @@
 6. **Supercell 规则改了明确目标**：QX 那条远程清单没写 `force-policy`，靠清单自带策略列；
    这里明确指向 `Supercell` 组（成员 `DIRECT, 节点选择, REJECT`，默认直连）。
 7. **`节点选择` 多了 `include-all`**：QX 里只能靠测速组自动选，现在可以在组里手动点具体节点。其余成员与顺序不变。
+   同时给它加了与「自动选择」相同的 `exclude-filter`，避免「剩余流量/到期」等伪节点混进下拉。
 8. **QUIC 丢弃规则**：原样保留 `udp_drop_list = 443`。以后用 hysteria2/tuic 想跑 QUIC，把那一行 `AND…REJECT` 删掉。
 9. **Apple / Unbreak / Custom 三段内联了**（1821 + 34 + 8 条）。原 QX 是远程拉取，现在写在覆写文件里：
    好处是不用额外托管、不会因为 CDN 抽风丢规则；代价是上游更新要跑一次脚本（见下）。
-   blackmatrix7 那 19 个清单仍是远程自动更新（间隔沿用 QX 的 update-interval，单位都是秒）。
+   blackmatrix7 的清单仍是远程自动更新（间隔沿用 QX 的 update-interval，单位都是秒）。
+   其中 AdvertisingLite / Global / China 采用「`X.yaml` + `X_Domain.yaml`」双文件（后者 `behavior: domain`），
+   因为上游把这几份大清单的域名部分单独发布了；只挂 `X.yaml` 会丢掉 3 万多条域名规则。
+   Netflix 额外挂 `Netflix_IP.yaml`（`behavior: ipcidr`，`RULE-SET` 带 `no-resolve`）补齐 IP 段。
 10. **任务/脚本**：`[task_local]` 三个 `event-interaction`（流量查询、节点信息查询等）是 QX 独有 UI，
     Clash Mi 没有；`[rewrite_remote]` 那 6 条全部 `enabled=false`，没有实际损失。
+11. **AWAvenue 用 Classical 版**：`AWAvenue-Ads-Rule-Clash.yaml` 是 domain 格式（裸域名），
+    在 `behavior: classical` 下会全部解析失败；这里改用 `AWAvenue-Ads-Rule-Clash-Classical.yaml`。
+12. **本地修正了两处上游过宽/不合适的规则**：
+    - `time.apple.com` / `time-ios.apple.com` / `time-macos.apple.com` 显式 DIRECT（NTP 走 UDP，经代理常不通）；
+    - `DOMAIN-SUFFIX,digicert.com` 收敛为只把 `ocsp/crl3/crl4/cacerts.digicert.com` 送「苹果服务」，其余直连。
 
 ## 维护
 
 上游清单更新后刷新内联段（PowerShell）：
 
 ```powershell
-cd C:\Research\QuanX\ClashMi
+cd C:\Research\apple-policy\ClashMi
 python qx2clash.py https://cdn.jsdelivr.net/gh/tankui-cq/apple-policy@main/Apple.list   --inject clashmi-override.yaml --marker APPLE
 python qx2clash.py https://cdn.jsdelivr.net/gh/ddgksf2013/Filter@master/Unbreak.list   --inject clashmi-override.yaml --marker UNBREAK
 python qx2clash.py https://cdn.jsdelivr.net/gh/tankui-cq/apple-policy@main/Custom.list  --inject clashmi-override.yaml --marker CUSTOM
@@ -103,8 +112,10 @@ python qx2clash.py https://cdn.jsdelivr.net/gh/tankui-cq/apple-policy@main/Custo
   `https://cdn.jsdelivr.net/gh/tankui-cq/apple-policy@main/ClashMi/clashmi-override.yaml`
   （jsdelivr 有约 12 小时缓存，急着生效用 `https://purge.jsdelivr.net/gh/...` 刷一下）。
 - **iOS 内存**：官方 FAQ 提到 iOS 有内存上限，规则太多会「连上就断」。这里已经把最大的一份（ChinaIPs 1.9 万条）
-  换成 GEOIP；如果还不够，把 blackmatrix7 的清单换成 `mrs` 格式（`format: mrs`，behavior 用 `domain` / `ipcidr`），
-  流量和内存都会明显下降。
+  换成 GEOIP；AdvertisingLite / Global / China 的域名部分改用 `behavior: domain` 的 `*_Domain.yaml`
+  （mihomo 用 succinct DomainSet 存储，比几万条 classical 规则省很多内存）。
+  注意 **blackmatrix7 不发布 `.mrs`**，不要照抄 `format: mrs`；确实需要 mrs 可改用
+  [MetaCubeX/meta-rules-dat](https://github.com/MetaCubeX/meta-rules-dat) 的 `geo/geosite/*.mrs`。
 
 ## 排错
 

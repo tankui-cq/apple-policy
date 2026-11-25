@@ -102,7 +102,8 @@ proxy-groups:
     type: url-test
     icon: https://cdn.jsdelivr.net/gh/Orz-3/mini@master/Color/Global.png
     include-all: true
-    filter: "(?i)priority"
+    # 机场常用 Priority / 备用 / Backup 命名，这里一并匹配，避免整组为空
+    filter: "(?i)(priority|备用|備用|backup|fallback)"
     url: http://www.gstatic.com/generate_204
     interval: 1800
     tolerance: 100
@@ -113,6 +114,9 @@ proxy-groups:
     type: select
     icon: https://cdn.jsdelivr.net/gh/Orz-3/mini@master/Color/Static.png
     include-all: true
+    # 与「自动选择」一致：剔除「剩余流量/到期/官网」等伪节点，
+    # 否则它们会出现在手动下拉里，点中会直接断网。
+    exclude-filter: "(剩余|到期|流量|群组|群組|Telegram|欢迎|歡迎|官网|官網|套餐|重置|客服|订阅|訂閱|网址|網址|购买|購買)"
     proxies:
       - 自动选择
       - 美国
@@ -185,7 +189,7 @@ proxy-groups:
   - name: 🤖 AI Platforms
     type: select
     icon: https://cdn.jsdelivr.net/gh/Orz-3/mini@master/Color/OpenAI.png
-    proxies: [美国, 日本, 香港, 新加坡, DIRECT]
+    proxies: [节点选择, 美国, 日本, 香港, 新加坡, DIRECT]
 
   - name: 🛑 广告拦截
     type: select
@@ -228,11 +232,21 @@ rule-providers:
     path: ./rules/ads-lite.yaml
     interval: 604800
 
+  # blackmatrix7 的大清单拆成两份：X.yaml 只放关键词/IP 等，
+  # "域名主体"在 X_Domain.yaml。必须两份一起挂，否则几万条域名广告规则不生效。
+  ads-lite-domain:
+    type: http
+    behavior: domain
+    format: yaml
+    url: https://cdn.jsdelivr.net/gh/blackmatrix7/ios_rule_script@master/rule/Clash/AdvertisingLite/AdvertisingLite_Domain.yaml
+    path: ./rules/ads-lite-domain.yaml
+    interval: 604800
+
   awavenue:
     type: http
     behavior: classical
     format: yaml
-    url: https://cdn.jsdelivr.net/gh/TG-Twilight/AWAvenue-Ads-Rule@main/Filters/AWAvenue-Ads-Rule-Clash.yaml
+    url: https://cdn.jsdelivr.net/gh/TG-Twilight/AWAvenue-Ads-Rule@main/Filters/AWAvenue-Ads-Rule-Clash-Classical.yaml
     path: ./rules/awavenue.yaml
     interval: 86400
 
@@ -282,6 +296,15 @@ rule-providers:
     format: yaml
     url: https://cdn.jsdelivr.net/gh/blackmatrix7/ios_rule_script@master/rule/Clash/Netflix/Netflix.yaml
     path: ./rules/netflix.yaml
+    interval: 172800
+
+  # Netflix 的 IP 段单独发布（behavior: ipcidr，裸 CIDR）
+  netflix-ip:
+    type: http
+    behavior: ipcidr
+    format: yaml
+    url: https://cdn.jsdelivr.net/gh/blackmatrix7/ios_rule_script@master/rule/Clash/Netflix/Netflix_IP.yaml
+    path: ./rules/netflix-ip.yaml
     interval: 172800
 
   disney:
@@ -340,12 +363,30 @@ rule-providers:
     path: ./rules/global.yaml
     interval: 172800
 
+  # 同上：Global 的 3.5 万条域名在 Global_Domain.yaml
+  global-domain:
+    type: http
+    behavior: domain
+    format: yaml
+    url: https://cdn.jsdelivr.net/gh/blackmatrix7/ios_rule_script@master/rule/Clash/Global/Global_Domain.yaml
+    path: ./rules/global-domain.yaml
+    interval: 172800
+
   china:
     type: http
     behavior: classical
     format: yaml
     url: https://cdn.jsdelivr.net/gh/blackmatrix7/ios_rule_script@master/rule/Clash/China/China.yaml
     path: ./rules/china.yaml
+    interval: 172800
+
+  # 同上：China 的 3.7 千条域名在 China_Domain.yaml
+  china-domain:
+    type: http
+    behavior: domain
+    format: yaml
+    url: https://cdn.jsdelivr.net/gh/blackmatrix7/ios_rule_script@master/rule/Clash/China/China_Domain.yaml
+    path: ./rules/china-domain.yaml
     interval: 172800
 
 # ---------------------------------------------------------------------------
@@ -375,6 +416,19 @@ rules:
   - 'DOMAIN-SUFFIX,crashlytics.com,DIRECT'
   - 'DOMAIN-SUFFIX,apps.mzstatic.com,DIRECT'
   - 'DOMAIN-SUFFIX,akadns.net,DIRECT'
+
+  # ── NTP 直连（UDP 123 经代理节点经常不通，尤其 anytls 这类纯 TCP 节点）
+  - 'DOMAIN,time.apple.com,DIRECT'
+  - 'DOMAIN,time-ios.apple.com,DIRECT'
+  - 'DOMAIN,time-macos.apple.com,DIRECT'
+
+  # ── 收敛 Apple.list 里过宽的 DOMAIN-SUFFIX,digicert.com：
+  # 只把 Apple 相关的 OCSP/CRL 入口送「苹果服务」，其余 DigiCert 直连
+  - 'DOMAIN,ocsp.digicert.com,🍎 苹果服务'
+  - 'DOMAIN,crl3.digicert.com,🍎 苹果服务'
+  - 'DOMAIN,crl4.digicert.com,🍎 苹果服务'
+  - 'DOMAIN,cacerts.digicert.com,🍎 苹果服务'
+  - 'DOMAIN-SUFFIX,digicert.com,DIRECT'
 
   # ── 反劫持清单误伤的正规厂商中国站（原样照搬）
   - 'DOMAIN-SUFFIX,ultraiso.net,DIRECT'
@@ -468,6 +522,7 @@ rules:
   # 广告 / 劫持
   - 'RULE-SET,hijacking,🛑 广告拦截'
   - 'RULE-SET,ads-lite,🛑 广告拦截'
+  - 'RULE-SET,ads-lite-domain,🛑 广告拦截'
   - 'RULE-SET,awavenue,🛑 广告拦截'
 
   # Apple（原 Apple.list 三段：AI -> 大流量 DIRECT -> 服务，保持原文件顺序内联）
@@ -2302,6 +2357,7 @@ rules:
   - 'RULE-SET,claude,🤖 AI Platforms'
   - 'RULE-SET,copilot,🤖 AI Platforms'
   - 'RULE-SET,netflix,奈迪'
+  - 'RULE-SET,netflix-ip,奈迪,no-resolve'
   - 'RULE-SET,disney,奈迪'
   - 'RULE-SET,telegram,电报'
   - 'RULE-SET,spotify,Spotify'
@@ -2313,7 +2369,9 @@ rules:
 
   # 通用 / 国内
   - 'RULE-SET,global,国外网站'
+  - 'RULE-SET,global-domain,国外网站'
   - 'RULE-SET,china,DIRECT'
+  - 'RULE-SET,china-domain,DIRECT'
 
   # 国内 IP 兜底（QX 的 ChinaIPs.list，用内置 GEOIP 等价；只在前面全都没命中时才解析域名）
   - 'GEOIP,CN,DIRECT'
@@ -2348,12 +2406,23 @@ dns:
     - 'melogin.cn'
     - 'falogin.cn'
     - '+.local'
+    # 以下为 mihomo 内置默认 fake-ip-filter 的常用项（自定义列表会整体覆盖默认值）
+    - '+.lan'
+    - '+.msftconnecttest.com'
+    - '+.msftncsi.com'
+    - '+.stun.playstation.net'
+    - '+.srv.nintendo.net'
   default-nameserver:             # 只用于解析 DoH/DoT 域名，这里全是纯 IP
     - 223.5.5.5
     - 119.29.29.29
   nameserver:                     # QX: server=223.5.5.5 / server=119.29.29.29
     - 223.5.5.5
     - 119.29.29.29
+  # 解析机场节点域名专用：用国内加密 DNS（可达性优先；若机场域名被污染再换境外 DoH）
+  proxy-server-nameserver:
+    - https://dns.alidns.com/dns-query
+    - https://doh.pub/dns-query
+    - 223.5.5.5
   nameserver-policy:
     # QX: server=/dl.google.com/223.5.5.5 等（Google 下载/更新走国内 CDN）
     '+.dl.google.com': [223.5.5.5, 119.29.29.29]
