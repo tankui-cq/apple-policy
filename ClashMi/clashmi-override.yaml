@@ -1,9 +1,12 @@
 # =============================================================================
 # Clash Mi 自定义覆写
-# BUILD: 2026-11-26 10:13 CST | TAG: v20261126-1 | 23 组 / 25 规则集 / 1948 条
+# BUILD: 2026-11-26 11:11 CST | TAG: v20261126-2 | 23 组 / 25 规则集 / 1948 条
 # 用法：设置 → 核心设置 → 覆写 → 添加配置链接或导入本文件 → 挂到订阅
 # 订阅只提供节点；本文件不定义 proxies，分组用 include-all + filter
 # =============================================================================
+
+# 多 IP 域名并发握手：脏 DNS / 多 CDN 边缘时，避免第一个 IP 不通就整站卡死
+tcp-concurrent: true
 
 # ---------------------------------------------------------------------------
 # 策略组
@@ -162,7 +165,8 @@ proxy-groups:
   - name: 🍎 苹果服务
     type: select
     icon: https://cdn.jsdelivr.net/gh/Orz-3/mini@master/Color/Apple.png
-    proxies: [美国, DIRECT, 节点选择]
+    # 主流默认直连：iCloud 中国 / App Store / Apple Pay / APNs 代理到美国会异常
+    proxies: [DIRECT, 美国, 节点选择]
 
   - name: 🍎 Apple 智能
     type: select
@@ -2394,7 +2398,7 @@ dns:
   enable: true
   ipv6: false                     # QX: no-ipv6
   enhanced-mode: fake-ip
-  fake-ip-range: 198.18.0.1/16    # 与「核心设置-TUN」里的地址段一致，不一致会断网
+  fake-ip-range: 198.18.0.1/16    # 标准 fake-ip 段，保持默认；TUN 地址段用 App 默认 172.19.0.1/30
   fake-ip-filter:                 # QX: dns_exclusion_list + 路由器管理页
     - '+.10099.com.cn'
     - '+.cmpassport.com'
@@ -2419,28 +2423,86 @@ dns:
     - '+.msftncsi.com'
     - '+.stun.playstation.net'
     - '+.srv.nintendo.net'
-  # 引导 DNS：只用于解析下面 DoH 服务器的域名，必须是纯 IP
+    # 主流 / App 默认必排除项：这些域名走 fake-ip 会坏
+    - '+.push.apple.com'            # APNs 推送
+    - '*.mcdn.bilivideo.cn'         # B 站 P2P
+    - '+.bilibili.com'
+    - '+.bilicdn.com'
+    - '+.bilivideo.com'
+    - '+.market.xiaomi.com'
+    - 'localhost.ptlogin2.qq.com'
+    - 'time.*.com'
+    - 'time.*.apple.com'
+    - 'time1.cloud.tencent.com'
+    - 'ntp.*.com'
+    - '*.pool.ntp.org'
+    - '*.ntp.org.cn'
+    - '+.stun.*.*'
+    - '+.stun.*.*.*'
+    - '+.stun.*.*.*.*'
+    - 'lens.l.google.com'
+    - '*.n.n.srv.nintendo.net'
+    - 'xbox.*.*.microsoft.com'
+    - '*.*.xboxlive.com'
+    - '+.services.googleapis.cn'
+    - 'WORKGROUP'
+  # 引导 DNS：只用于解析下面「域名形式」的 DoH；纯 IP 写法用不到它
   default-nameserver:
     - 223.5.5.5
     - 119.29.29.29
     - 114.114.114.114
-  # 主 DNS：加密 DoH（主流做法）
-  # 明文 UDP53 很容易被路由器/公司网/运营商劫持或直接丢弃，解析到过期或错误的 CDN 边缘 IP 时，
-  # 表现就是「直连能建连但不通，切全局/代理反而正常」——代理由节点远端解析，绕开了本地 DNS。
-  # 这里同时给出 DoH 域名和 DoH IP 两种写法：域名解析失败时仍可直连 IP 建 DoH。
+    - system                      # 公司网/酒店网常只放行内网 DNS
+  # 主 DNS：主流做法是「加密 + 明文 + 系统」混合，一层被拦还有下一层
+  # 顺序：IP 形式 DoH（不需要引导）→ 域名形式 DoH → 明文 → 系统
   nameserver:
-    - https://dns.alidns.com/dns-query
-    - https://doh.pub/dns-query
     - https://223.5.5.5/dns-query
     - https://1.12.12.12/dns-query
-  # 节点域名解析：同样走 DoH（节点域名被污染会导致整份订阅不可用）
-  proxy-server-nameserver:
     - https://dns.alidns.com/dns-query
     - https://doh.pub/dns-query
+    - 223.5.5.5
+    - 119.29.29.29
+    - system
+  # 节点域名解析：节点域名被污染会让整份订阅不可用
+  proxy-server-nameserver:
     - https://223.5.5.5/dns-query
+    - https://1.12.12.12/dns-query
+    - 223.5.5.5
+    - 119.29.29.29
+  # DIRECT 出口单独指定解析（不填则跟随 nameserver）
+  direct-nameserver:
+    - https://223.5.5.5/dns-query
+    - 223.5.5.5
+    - system
+  direct-nameserver-follow-policy: false
+  use-hosts: true
+  use-system-hosts: true
+  cache-algorithm: arc
+  prefer-h3: false                # 网络封 QUIC 时不要额外等 DoH-H3
+  respect-rules: false
   nameserver-policy:
     # Google 下载/更新走国内 CDN
-    '+.dl.google.com': [https://dns.alidns.com/dns-query, https://doh.pub/dns-query]
-    '+.dl.l.google.com': [https://dns.alidns.com/dns-query, https://doh.pub/dns-query]
-    '+.update.googleapis.com': [https://dns.alidns.com/dns-query, https://doh.pub/dns-query]
-    '+.clientservices.googleapis.com': [https://dns.alidns.com/dns-query, https://doh.pub/dns-query]
+    '+.dl.google.com': [https://223.5.5.5/dns-query, 223.5.5.5]
+    '+.dl.l.google.com': [https://223.5.5.5/dns-query, 223.5.5.5]
+    '+.update.googleapis.com': [https://223.5.5.5/dns-query, 223.5.5.5]
+    '+.clientservices.googleapis.com': [https://223.5.5.5/dns-query, 223.5.5.5]
+
+# ---------------------------------------------------------------------------
+# 嗅探
+# Clash Mi 在「自定义覆写」下写 Sniffer: null（App 的嗅探开关不生效），
+# 所以必须写在这里，否则用自身 DNS/HTTPDNS 的 App 只能按 IP 匹配规则。
+# ---------------------------------------------------------------------------
+sniffer:
+  enable: true
+  force-dns-mapping: true
+  parse-pure-ip: true
+  override-destination: false     # 只嗅探不改写目标，避免误伤
+  sniff:
+    HTTP:
+      ports: [80, 8080-8880]
+    TLS:
+      ports: [443, 8443]
+    QUIC:
+      ports: [443, 8443]
+  skip-domain:
+    - '+.push.apple.com'
+    - 'Mijia Cloud'

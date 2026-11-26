@@ -26,9 +26,14 @@
 - 一个订阅同时只能挂一个覆写：选了「自定义覆写」就不会再挂「内置-覆写」。挂了自定义覆写后，
   **App「核心设置-DNS」里的设置不再写入最终配置**（源码 `defaultConfigNoOverwrite()` 里 `DNS: null`），
   所以 DNS 写在本文件的 `dns:` 段。
-- DNS 用**加密 DoH**（阿里 + DNSPod，另附 DoH-IP 兜底），不再用明文 UDP53。明文 DNS 被路由器/公司网/
-  运营商劫持或丢弃时，会解析到过期/错误的 CDN 边缘 IP：表现为「规则判直连、能建连但页面不通，
-  切全局/代理反而正常」（代理由节点远端解析）。这是配置层面能根除的一类问题，不需要逐个站点加规则。
+- DNS 是「加密 + 明文 + 系统」混合（对齐 mihomo 文档 / App 默认）：IP 形式 DoH 在前（不需要引导解析），
+  再域名形式 DoH、明文、`system`。只写 DoH 时，公司网/酒店网把 UDP53 拦掉会连 DoH 域名都解析不出来；
+  只写明文时又会被劫持。混合后任何一层被拦都还有下一层。
+- 另外三项对齐主流基线：`tcp-concurrent: true`（多 IP 并发握手，脏 DNS / 多 CDN 边缘时不会卡在坏 IP 上）、
+  `sniffer.enable: true`（Clash Mi 在自定义覆写下 App 的嗅探开关不生效，必须写进配置）、
+  `fake-ip-filter` 补齐 App 默认项（APNs 推送、B 站 P2P、NTP/STUN、Xbox 等）。
+- **苹果服务组默认改为 DIRECT**：本文件 1948 条规则里有 1764 条指向它，原默认是「美国」，
+  等于 iCloud 中国 / App Store / Apple Pay / APNs 全走美国节点，这是最容易造成「部分网站/功能异常」的一处。
 
 ## 导入步骤
 
@@ -43,6 +48,7 @@
 5. **TUN / 内网**：`核心设置 → TUN` 打开 TUN；把「排除本地网络（excluded routes）」打开，
    或手动排除 `192.168.0.0/16, 172.16.0.0/12, 10.0.0.0/8, 100.64.0.0/10, 224.0.0.0/4` ——
    对应 QX 的 `excluded_routes`，不排掉的话路由器管理页 / AirPlay / 投屏会走代理。
+   TUN 地址段保持 App 默认 `172.19.0.1/30`；「IPv6」关闭（与 `dns.ipv6: false` 一致）；模式选 `规则`。
 6. 启动，看「代理」页分组是否都有节点、「规则」页命中情况是否符合预期。
 
 如果分组显示为空：说明内核版本不认 `include-all`，把该组的 `include-all: true` 换成
@@ -117,7 +123,7 @@ python qx2clash.py https://cdn.jsdelivr.net/gh/tankui-cq/apple-policy@main/Custo
 - 改自定义规则：直接改 `# >>> GENERATED:CUSTOM` 段（或改仓库里的 `Custom.list` 再跑一次脚本），
   然后重进 Clash Mi 更新覆写即可 —— 和 QX 里「改 Custom.list + 更新配置」的流程一致。
 - 把覆写文件推到仓库后用「添加配置链接」挂载：
-  `https://cdn.jsdelivr.net/gh/tankui-cq/apple-policy@v20261126-1/ClashMi/clashmi-override.yaml`
+  `https://cdn.jsdelivr.net/gh/tankui-cq/apple-policy@v20261126-2/ClashMi/clashmi-override.yaml`
   ⚠️ jsdelivr 的 `@main` 分支别名会缓存约 12 小时，`purge.jsdelivr.net` 也刷不掉别名解析；
   用 **tag**（或 pinned commit）URL 才能立即拿到新版本。每次改完配置会打一个新 tag。
 - **iOS 内存**：官方 FAQ 提到 iOS 有内存上限，规则太多会「连上就断」。这里已经把最大的一份（ChinaIPs 1.9 万条）
@@ -130,10 +136,12 @@ python qx2clash.py https://cdn.jsdelivr.net/gh/tankui-cq/apple-policy@main/Custo
 
 | 现象 | 处理 |
 |---|---|
+| 部分网站 / App 功能异常 | ①「代理」页把 **🍎 苹果服务** 切 `DIRECT` 重试；②把 **🛑 广告拦截** 切 `DIRECT` 重试；③都不行，记下 `连接` 页那条的主机 / 规则 / 解析地址 |
+| 推送、通话、B 站视频异常 | `dns.fake-ip-filter` 是否包含 `+.push.apple.com`、`+.bilivideo.com`、STUN 项（v20261126-2 已补） |
 | 分组全空 | 内核不认 `include-all`，换 `include-all-proxies` / `include-all-providers` |
 | 全部流量走直连 / 全部走代理 | 检查「编辑配置 → 核心覆写」是否真的选中了本覆写；再确认「编辑配置 → 规则」为空 |
 | 规则页看不到我们的规则 | 同上：`rules` 被内置模板覆写顶掉了 |
-| 断网但代理正常 | `dns.fake-ip-range` 与「核心设置-TUN」里的地址段不一致，改成一致（默认 `198.18.0.1/16`） |
+| 断网或只有少数 App 能上网 | 确认「核心设置-TUN」地址段没被改乱（保持 App 默认 `172.19.0.1/30` 即可，不要手工填 `198.18.x`） |
 | 路由器管理页打不开 | TUN 排除本地网络；`tplogin.cn` 等已在 `fake-ip-filter` 里，走真实解析到门户页再跳本地 |
 | 「自动选择」里有「剩余流量/到期」 | `exclude-filter` 没生效，见差异说明第 2 条 |
 | 某清单 404 | jsdelivr 偶发抽风，换个时间重试；或该分类在 blackmatrix7 的 `rule/Clash/` 下改名，改 `url` 即可 |
