@@ -36,6 +36,8 @@
   等于 iCloud 中国 / App Store / Apple Pay / APNs 全走美国节点，这是最容易造成「部分网站/功能异常」的一处。
 - 策略组：删掉「自动选择」（地区组本身就是本地区内自动最快），新增「临时节点」单独组；
   临时节点不参与任何测速，只能手动选。`节点选择` 保留 `include-all`，仍可钉单个正式节点。
+- 地区匹配兼容 `US01` / `US-01` / `USA01` / `HKG01` 这类无分隔命名（原来的 `\bus\b` 匹配不到带数字后缀的名字），
+  同时补了城市名和机场码（DFW/IAD/ATL、NRT/HND/KIX、ICN/GMP、TPE/KHH、SIN/SGP、FRA/BER 等）。
 
 ## 导入步骤
 
@@ -125,7 +127,7 @@ python qx2clash.py https://cdn.jsdelivr.net/gh/tankui-cq/apple-policy@main/Custo
 - 改自定义规则：直接改 `# >>> GENERATED:CUSTOM` 段（或改仓库里的 `Custom.list` 再跑一次脚本），
   然后重进 Clash Mi 更新覆写即可 —— 和 QX 里「改 Custom.list + 更新配置」的流程一致。
 - 把覆写文件推到仓库后用「添加配置链接」挂载：
-  `https://cdn.jsdelivr.net/gh/tankui-cq/apple-policy@v20261126-3/ClashMi/clashmi-override.yaml`
+  `https://cdn.jsdelivr.net/gh/tankui-cq/apple-policy@v20261126-4/ClashMi/clashmi-override.yaml`
   ⚠️ jsdelivr 的 `@main` 分支别名会缓存约 12 小时，`purge.jsdelivr.net` 也刷不掉别名解析；
   用 **tag**（或 pinned commit）URL 才能立即拿到新版本。每次改完配置会打一个新 tag。
 - **iOS 内存**：官方 FAQ 提到 iOS 有内存上限，规则太多会「连上就断」。这里已经把最大的一份（ChinaIPs 1.9 万条）
