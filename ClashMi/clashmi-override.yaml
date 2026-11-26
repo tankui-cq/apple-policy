@@ -1,6 +1,6 @@
 # =============================================================================
 # Clash Mi 自定义覆写
-# BUILD: 2026-11-26 11:11 CST | TAG: v20261126-2 | 23 组 / 25 规则集 / 1948 条
+# BUILD: 2026-11-26 14:13 CST | TAG: v20261126-3 | 23 组 / 25 规则集 / 1948 条
 # 用法：设置 → 核心设置 → 覆写 → 添加配置链接或导入本文件 → 挂到订阅
 # 订阅只提供节点；本文件不定义 proxies，分组用 include-all + filter
 # =============================================================================
@@ -12,22 +12,13 @@ tcp-concurrent: true
 # 策略组
 # ---------------------------------------------------------------------------
 proxy-groups:
-  # ── 测速组
-  - name: 自动选择
-    type: url-test
-    icon: https://cdn.jsdelivr.net/gh/Orz-3/mini@master/Color/Urltest.png
-    include-all: true
-    # 剔除「剩余流量/到期/官网」等伪节点（Go 正则不支持 lookahead，用 exclude-filter）
-    exclude-filter: "(剩余|到期|流量|群组|群組|Telegram|欢迎|歡迎|官网|官網|套餐|重置|客服|订阅|訂閱|网址|網址|购买|購買)"
-    url: https://www.gstatic.com/generate_204
-    interval: 900
-    tolerance: 80
-
+  # ── 测速组（每个地区组 = 本地区内自动选最快）
   - name: 香港
     type: url-test
     icon: https://cdn.jsdelivr.net/gh/Orz-3/mini@master/Color/HK.png
     include-all: true
     filter: "(?i)(🇭🇰|香港|港|\\bhk\\b|\\bhkg\\b|hong\\s?kong)"
+    exclude-filter: "(剩余|到期|流量|群组|群組|Telegram|欢迎|歡迎|官网|官網|套餐|重置|客服|订阅|訂閱|网址|網址|购买|購買|临时|臨時|试用|試用|体验|體驗|限时|限時|免费|免費|短期|一次性|\\btrial\\b|\\btest\\b)"
     url: https://www.gstatic.com/generate_204
     interval: 900
     tolerance: 80
@@ -36,7 +27,8 @@ proxy-groups:
     type: url-test
     icon: https://cdn.jsdelivr.net/gh/Orz-3/mini@master/Color/TW.png
     include-all: true
-    filter: "(?i)(🇹🇼|台湾|台灣|台北|新北|桃园|\\btw\\b|\\btpe\\b|taiwan)"
+    filter: "(?i)(🇹🇼|台湾|台灣|台北|新北|桃园|高雄|\\btw\\b|\\btpe\\b|\\bkhh\\b|taiwan)"
+    exclude-filter: "(剩余|到期|流量|群组|群組|Telegram|欢迎|歡迎|官网|官網|套餐|重置|客服|订阅|訂閱|网址|網址|购买|購買|临时|臨時|试用|試用|体验|體驗|限时|限時|免费|免費|短期|一次性|\\btrial\\b|\\btest\\b)"
     url: https://www.gstatic.com/generate_204
     interval: 900
     tolerance: 80
@@ -45,7 +37,8 @@ proxy-groups:
     type: url-test
     icon: https://cdn.jsdelivr.net/gh/Orz-3/mini@master/Color/JP.png
     include-all: true
-    filter: "(?i)(🇯🇵|日本|东京|東京|大阪|埼玉|\\bjp\\b|\\bnrt\\b|\\bhnd\\b|\\bkix\\b|japan)"
+    filter: "(?i)(🇯🇵|日本|东京|東京|大阪|埼玉|名古屋|福冈|福岡|\\bjp\\b|\\bnrt\\b|\\bhnd\\b|\\bkix\\b|\\bngo\\b|\\bfuk\\b|japan)"
+    exclude-filter: "(剩余|到期|流量|群组|群組|Telegram|欢迎|歡迎|官网|官網|套餐|重置|客服|订阅|訂閱|网址|網址|购买|購買|临时|臨時|试用|試用|体验|體驗|限时|限時|免费|免費|短期|一次性|\\btrial\\b|\\btest\\b)"
     url: https://www.gstatic.com/generate_204
     interval: 900
     tolerance: 100
@@ -54,7 +47,8 @@ proxy-groups:
     type: url-test
     icon: https://cdn.jsdelivr.net/gh/Orz-3/mini@master/Color/KR.png
     include-all: true
-    filter: "(?i)(🇰🇷|韩国|韓國|首尔|首爾|春川|\\bkr\\b|\\bicn\\b|korea)"
+    filter: "(?i)(🇰🇷|韩国|韓國|首尔|首爾|春川|釜山|\\bkr\\b|\\bicn\\b|\\bgmp\\b|\\bpus\\b|korea)"
+    exclude-filter: "(剩余|到期|流量|群组|群組|Telegram|欢迎|歡迎|官网|官網|套餐|重置|客服|订阅|訂閱|网址|網址|购买|購買|临时|臨時|试用|試用|体验|體驗|限时|限時|免费|免費|短期|一次性|\\btrial\\b|\\btest\\b)"
     url: https://www.gstatic.com/generate_204
     interval: 900
     tolerance: 100
@@ -64,6 +58,7 @@ proxy-groups:
     icon: https://cdn.jsdelivr.net/gh/Orz-3/mini@master/Color/SG.png
     include-all: true
     filter: "(?i)(🇸🇬|新加坡|狮城|獅城|\\bsg\\b|\\bsin\\b|singapore)"
+    exclude-filter: "(剩余|到期|流量|群组|群組|Telegram|欢迎|歡迎|官网|官網|套餐|重置|客服|订阅|訂閱|网址|網址|购买|購買|临时|臨時|试用|試用|体验|體驗|限时|限時|免费|免費|短期|一次性|\\btrial\\b|\\btest\\b)"
     url: https://www.gstatic.com/generate_204
     interval: 900
     tolerance: 100
@@ -72,7 +67,8 @@ proxy-groups:
     type: url-test
     icon: https://cdn.jsdelivr.net/gh/Orz-3/mini@master/Color/US.png
     include-all: true
-    filter: "(?i)(🇺🇸|美国|美國|洛杉矶|洛杉磯|西雅图|西雅圖|纽约|紐約|圣何塞|聖何塞|硅谷|矽谷|\\bus\\b|\\busa\\b|\\blax\\b|\\bsfo\\b|\\bsjc\\b|\\bsea\\b|\\bjfk\\b|\\bord\\b|united\\s?states)"
+    filter: "(?i)(🇺🇸|美国|美國|美西|美东|美東|洛杉矶|洛杉磯|西雅图|西雅圖|纽约|紐約|圣何塞|聖何塞|硅谷|矽谷|达拉斯|達拉斯|芝加哥|凤凰城|鳳凰城|波特兰|波特蘭|拉斯维加斯|费利蒙|費利蒙|圣克拉拉|聖克拉拉|阿什本|迈阿密|邁阿密|波士顿|波士頓|亚特兰大|亞特蘭大|丹佛|圣迭戈|聖迭戈|\\bus\\b|\\busa\\b|\\blax\\b|\\bsfo\\b|\\bsjc\\b|\\bsea\\b|\\bjfk\\b|\\bord\\b|\\bdfw\\b|\\biad\\b|\\batl\\b|\\bmia\\b|\\bbos\\b|\\bphx\\b|\\bden\\b|\\blas\\b|\\bsan\\b|\\bpdx\\b|\\bewr\\b|united\\s?states)"
+    exclude-filter: "(剩余|到期|流量|群组|群組|Telegram|欢迎|歡迎|官网|官網|套餐|重置|客服|订阅|訂閱|网址|網址|购买|購買|临时|臨時|试用|試用|体验|體驗|限时|限時|免费|免費|短期|一次性|\\btrial\\b|\\btest\\b)"
     url: https://www.gstatic.com/generate_204
     interval: 900
     tolerance: 100
@@ -81,7 +77,8 @@ proxy-groups:
     type: url-test
     icon: https://cdn.jsdelivr.net/gh/Orz-3/mini@master/Color/DE.png
     include-all: true
-    filter: "(?i)(🇩🇪|德国|德國|germany)"
+    filter: "(?i)(🇩🇪|德国|德國|法兰克福|法蘭克福|柏林|\\bfra\\b|\\bber\\b|germany)"
+    exclude-filter: "(剩余|到期|流量|群组|群組|Telegram|欢迎|歡迎|官网|官網|套餐|重置|客服|订阅|訂閱|网址|網址|购买|購買|临时|臨時|试用|試用|体验|體驗|限时|限時|免费|免費|短期|一次性|\\btrial\\b|\\btest\\b)"
     url: https://www.gstatic.com/generate_204
     interval: 900
     tolerance: 100
@@ -92,17 +89,26 @@ proxy-groups:
     include-all: true
     # Priority / 备用 / Backup 节点
     filter: "(?i)(priority|备用|備用|backup|fallback)"
+    exclude-filter: "(剩余|到期|流量|群组|群組|Telegram|欢迎|歡迎|官网|官網|套餐|重置|客服|订阅|訂閱|网址|網址|购买|購買|临时|臨時|试用|試用|体验|體驗|限时|限時|免费|免費|短期|一次性|\\btrial\\b|\\btest\\b)"
     url: https://www.gstatic.com/generate_204
     interval: 1800
     tolerance: 100
+
+  # ── 临时节点（不参与任何测速，只能手动选）
+  - name: 临时节点
+    type: select
+    icon: https://cdn.jsdelivr.net/gh/Orz-3/mini@master/Color/Static.png
+    include-all: true
+    filter: "(?i)(临时|臨時|试用|試用|体验|體驗|限时|限時|免费|免費|短期|一次性|\\btrial\\b|\\btest\\b)"
+    exclude-filter: "(剩余|到期|流量|群组|群組|Telegram|欢迎|歡迎|官网|官網|套餐|重置|客服|订阅|訂閱|网址|網址|购买|購買)"
 
   # ── 手动选择组
   - name: 节点选择
     type: select
     icon: https://cdn.jsdelivr.net/gh/Orz-3/mini@master/Color/Static.png
     include-all: true
-    # 同上：剔除伪节点
-    exclude-filter: "(剩余|到期|流量|群组|群組|Telegram|欢迎|歡迎|官网|官網|套餐|重置|客服|订阅|訂閱|网址|網址|购买|購買)"
+    # 保留 include-all：地区组是 url-test，不能钉单节点；这里可以钉任意正式节点
+    exclude-filter: "(剩余|到期|流量|群组|群組|Telegram|欢迎|歡迎|官网|官網|套餐|重置|客服|订阅|訂閱|网址|網址|购买|購買|临时|臨時|试用|試用|体验|體驗|限时|限時|免费|免費|短期|一次性|\\btrial\\b|\\btest\\b)"
     proxies:
       - 美国
       - 日本
@@ -112,7 +118,7 @@ proxy-groups:
       - 韩国
       - 德国
       - 备用地区
-      - 自动选择
+      - 临时节点
       - DIRECT
 
   - name: 谷歌
@@ -155,7 +161,7 @@ proxy-groups:
   - name: 漏网之鱼
     type: select
     icon: https://cdn.jsdelivr.net/gh/Orz-3/mini@master/Color/Final.png
-    proxies: [美国, 日本, 香港, 台湾, 新加坡, 韩国, 节点选择, 自动选择, DIRECT]
+    proxies: [美国, 日本, 香港, 台湾, 新加坡, 韩国, 节点选择, 临时节点, DIRECT]
 
   - name: Supercell
     type: select

@@ -34,6 +34,8 @@
   `fake-ip-filter` 补齐 App 默认项（APNs 推送、B 站 P2P、NTP/STUN、Xbox 等）。
 - **苹果服务组默认改为 DIRECT**：本文件 1948 条规则里有 1764 条指向它，原默认是「美国」，
   等于 iCloud 中国 / App Store / Apple Pay / APNs 全走美国节点，这是最容易造成「部分网站/功能异常」的一处。
+- 策略组：删掉「自动选择」（地区组本身就是本地区内自动最快），新增「临时节点」单独组；
+  临时节点不参与任何测速，只能手动选。`节点选择` 保留 `include-all`，仍可钉单个正式节点。
 
 ## 导入步骤
 
@@ -77,9 +79,9 @@
 
 1. **USER-AGENT 规则丢了 23 条**（全在 `Apple.list`）。Clash/mihomo 没有 UA 规则类型；
    而且 QX 侧 `[mitm]` 只解密 boxjs，这些 UA 规则本来也只对明文 HTTP 生效，实际等于没在用。
-2. **「自动选择」的排除正则**：QX 用的是 `^(?!.*(剩余|到期|…)).*$` 负向断言，Go 正则不支持，
+2. **伪节点的排除正则**：QX 用的是 `^(?!.*(剩余|到期|…)).*$` 负向断言，Go 正则不支持，
    改成内核自带的 `exclude-filter:`，语义相同（名字含这些词的伪节点全部剔除）。
-   若你的版本仍把「剩余/到期」混进组里，说明 `exclude-filter` 没生效，改成白名单 `filter:`。
+   现在用在地区组 / `节点选择` / `临时节点` 上；若仍把「剩余/到期」混进组里，说明 `exclude-filter` 没生效，改成白名单 `filter:`。
 3. **国内兜底改成三层**（对齐 ACL4SSR / Loyalsoldier）：`china` / `china-domain`（域名）
    → `cncidr`（Loyalsoldier，约 9.6k 条中国 IP 段，`behavior: ipcidr`）→ `GEOIP,CN,DIRECT`。
    只靠 `GEOIP` 时，一旦 GeoIP 库缺失/过期，未收录的国内站就会掉进代理（蜜雪冰城 App/H5 就是这样）。
@@ -89,7 +91,7 @@
 6. **Supercell 规则改了明确目标**：QX 那条远程清单没写 `force-policy`，靠清单自带策略列；
    这里明确指向 `Supercell` 组（成员 `DIRECT, 节点选择, REJECT`，默认直连）。
 7. **`节点选择` 多了 `include-all`**：QX 里只能靠测速组自动选，现在可以在组里手动点具体节点。其余成员与顺序不变。
-   同时给它加了与「自动选择」相同的 `exclude-filter`，避免「剩余流量/到期」等伪节点混进下拉。
+   同时给它加了与地区组相同的 `exclude-filter`，避免「剩余流量/到期」和临时节点混进下拉。
 8. **QUIC 丢弃规则**：从最前面移到 `GEOIP,CN` 之后、`MATCH` 之前——只丢弃「本来要交给代理」的 QUIC，
    国内直连的 HTTP/3 不再被误杀。用 hysteria2/tuic 想全量跑 QUIC，删掉那一行 `AND…REJECT`。
 9. **Apple / Unbreak / Custom 三段内联了**（1821 + 34 + 8 条）。原 QX 是远程拉取，现在写在覆写文件里：
@@ -123,7 +125,7 @@ python qx2clash.py https://cdn.jsdelivr.net/gh/tankui-cq/apple-policy@main/Custo
 - 改自定义规则：直接改 `# >>> GENERATED:CUSTOM` 段（或改仓库里的 `Custom.list` 再跑一次脚本），
   然后重进 Clash Mi 更新覆写即可 —— 和 QX 里「改 Custom.list + 更新配置」的流程一致。
 - 把覆写文件推到仓库后用「添加配置链接」挂载：
-  `https://cdn.jsdelivr.net/gh/tankui-cq/apple-policy@v20261126-2/ClashMi/clashmi-override.yaml`
+  `https://cdn.jsdelivr.net/gh/tankui-cq/apple-policy@v20261126-3/ClashMi/clashmi-override.yaml`
   ⚠️ jsdelivr 的 `@main` 分支别名会缓存约 12 小时，`purge.jsdelivr.net` 也刷不掉别名解析；
   用 **tag**（或 pinned commit）URL 才能立即拿到新版本。每次改完配置会打一个新 tag。
 - **iOS 内存**：官方 FAQ 提到 iOS 有内存上限，规则太多会「连上就断」。这里已经把最大的一份（ChinaIPs 1.9 万条）
@@ -143,5 +145,5 @@ python qx2clash.py https://cdn.jsdelivr.net/gh/tankui-cq/apple-policy@main/Custo
 | 规则页看不到我们的规则 | 同上：`rules` 被内置模板覆写顶掉了 |
 | 断网或只有少数 App 能上网 | 确认「核心设置-TUN」地址段没被改乱（保持 App 默认 `172.19.0.1/30` 即可，不要手工填 `198.18.x`） |
 | 路由器管理页打不开 | TUN 排除本地网络；`tplogin.cn` 等已在 `fake-ip-filter` 里，走真实解析到门户页再跳本地 |
-| 「自动选择」里有「剩余流量/到期」 | `exclude-filter` 没生效，见差异说明第 2 条 |
+| 下拉里混进「剩余流量/到期」或临时节点 | `exclude-filter` 没生效，见差异说明第 2 条 |
 | 某清单 404 | jsdelivr 偶发抽风，换个时间重试；或该分类在 blackmatrix7 的 `rule/Clash/` 下改名，改 `url` 即可 |
