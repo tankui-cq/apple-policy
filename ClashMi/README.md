@@ -26,9 +26,9 @@
 - 一个订阅同时只能挂一个覆写：选了「自定义覆写」就不会再挂「内置-覆写」。挂了自定义覆写后，
   **App「核心设置-DNS」里的设置不再写入最终配置**（源码 `defaultConfigNoOverwrite()` 里 `DNS: null`），
   所以 DNS 写在本文件的 `dns:` 段。
-- DNS 是「加密 + 明文 + 系统」混合（对齐 mihomo 文档 / App 默认）：IP 形式 DoH 在前（不需要引导解析），
-  再域名形式 DoH、明文、`system`。只写 DoH 时，公司网/酒店网把 UDP53 拦掉会连 DoH 域名都解析不出来；
-  只写明文时又会被劫持。混合后任何一层被拦都还有下一层。
+- DNS 只用加密 DoH，不混明文 / `system`。mihomo 的 `nameserver` 是**并发查询、最快响应胜出**
+  （`batchExchange`），明文 UDP 永远比 DoH 快，混进去就会一直吃明文的脏答案——中通复发就是这个原因。
+  IP 形式 DoH 放前面（不需要 `default-nameserver` 引导），`default-nameserver` 只用纯 IP 做兜底。
 - 另外三项对齐主流基线：`tcp-concurrent: true`（多 IP 并发握手，脏 DNS / 多 CDN 边缘时不会卡在坏 IP 上）、
   `sniffer.enable: true`（Clash Mi 在自定义覆写下 App 的嗅探开关不生效，必须写进配置）、
   `fake-ip-filter` 补齐 App 默认项（APNs 推送、B 站 P2P、NTP/STUN、Xbox 等）。
@@ -127,7 +127,7 @@ python qx2clash.py https://cdn.jsdelivr.net/gh/tankui-cq/apple-policy@main/Custo
 - 改自定义规则：直接改 `# >>> GENERATED:CUSTOM` 段（或改仓库里的 `Custom.list` 再跑一次脚本），
   然后重进 Clash Mi 更新覆写即可 —— 和 QX 里「改 Custom.list + 更新配置」的流程一致。
 - 把覆写文件推到仓库后用「添加配置链接」挂载：
-  `https://cdn.jsdelivr.net/gh/tankui-cq/apple-policy@v20261126-4/ClashMi/clashmi-override.yaml`
+  `https://cdn.jsdelivr.net/gh/tankui-cq/apple-policy@v20261126-5/ClashMi/clashmi-override.yaml`
   ⚠️ jsdelivr 的 `@main` 分支别名会缓存约 12 小时，`purge.jsdelivr.net` 也刷不掉别名解析；
   用 **tag**（或 pinned commit）URL 才能立即拿到新版本。每次改完配置会打一个新 tag。
 - **iOS 内存**：官方 FAQ 提到 iOS 有内存上限，规则太多会「连上就断」。这里已经把最大的一份（ChinaIPs 1.9 万条）
@@ -141,6 +141,7 @@ python qx2clash.py https://cdn.jsdelivr.net/gh/tankui-cq/apple-policy@main/Custo
 | 现象 | 处理 |
 |---|---|
 | 部分网站 / App 功能异常 | ①「代理」页把 **🍎 苹果服务** 切 `DIRECT` 重试；②把 **🛑 广告拦截** 切 `DIRECT` 重试；③都不行，记下 `连接` 页那条的主机 / 规则 / 解析地址 |
+| 中通 / 直连站点又打不开 | `nameserver` / `direct-nameserver` 是否混进明文或 `system`；混了就是明文胜出、又拿脏 IP |
 | 推送、通话、B 站视频异常 | `dns.fake-ip-filter` 是否包含 `+.push.apple.com`、`+.bilivideo.com`、STUN 项（v20261126-2 已补） |
 | 分组全空 | 内核不认 `include-all`，换 `include-all-proxies` / `include-all-providers` |
 | 全部流量走直连 / 全部走代理 | 检查「编辑配置 → 核心覆写」是否真的选中了本覆写；再确认「编辑配置 → 规则」为空 |

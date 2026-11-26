@@ -1,6 +1,6 @@
 # =============================================================================
 # Clash Mi 自定义覆写
-# BUILD: 2026-11-26 14:23 CST | TAG: v20261126-4 | 23 组 / 25 规则集 / 1948 条
+# BUILD: 2026-11-26 14:35 CST | TAG: v20261126-5 | 23 组 / 25 规则集 / 1948 条
 # 用法：设置 → 核心设置 → 覆写 → 添加配置链接或导入本文件 → 挂到订阅
 # 订阅只提供节点；本文件不定义 proxies，分组用 include-all + filter
 # =============================================================================
@@ -2458,27 +2458,26 @@ dns:
     - 119.29.29.29
     - 114.114.114.114
     - system                      # 公司网/酒店网常只放行内网 DNS
-  # 主 DNS：主流做法是「加密 + 明文 + 系统」混合，一层被拦还有下一层
-  # 顺序：IP 形式 DoH（不需要引导）→ 域名形式 DoH → 明文 → 系统
+  # 主 DNS：只放加密 DoH，不能混明文/system
+  # mihomo 的 nameserver 是「并发查询、最快响应胜出」(batchExchange)，明文 UDP 永远比 DoH 快，
+  # 一旦混进去就会一直用明文答案，又回到被劫持/脏 CDN 的老问题（中通就是这样复发的）。
+  # IP 形式放前面，不需要引导解析；域名形式作为冗余。
   nameserver:
     - https://223.5.5.5/dns-query
     - https://1.12.12.12/dns-query
     - https://dns.alidns.com/dns-query
     - https://doh.pub/dns-query
-    - 223.5.5.5
-    - 119.29.29.29
-    - system
   # 节点域名解析：节点域名被污染会让整份订阅不可用
   proxy-server-nameserver:
     - https://223.5.5.5/dns-query
     - https://1.12.12.12/dns-query
-    - 223.5.5.5
-    - 119.29.29.29
+    - https://dns.alidns.com/dns-query
   # DIRECT 出口单独指定解析（不填则跟随 nameserver）
+  # 注意：这里也不能混明文，否则并发时明文胜出，直连又拿到脏 IP
   direct-nameserver:
     - https://223.5.5.5/dns-query
-    - 223.5.5.5
-    - system
+    - https://1.12.12.12/dns-query
+    - https://dns.alidns.com/dns-query
   direct-nameserver-follow-policy: false
   use-hosts: true
   use-system-hosts: true
