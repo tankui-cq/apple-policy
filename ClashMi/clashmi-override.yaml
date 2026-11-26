@@ -1,6 +1,6 @@
 # =============================================================================
 # Clash Mi 自定义覆写
-# BUILD: 2026-11-25 16:34 CST | TAG: v20261125-2 | 23 组 / 25 规则集 / 1948 条
+# BUILD: 2026-11-26 10:13 CST | TAG: v20261126-1 | 23 组 / 25 规则集 / 1948 条
 # 用法：设置 → 核心设置 → 覆写 → 添加配置链接或导入本文件 → 挂到订阅
 # 订阅只提供节点；本文件不定义 proxies，分组用 include-all + filter
 # =============================================================================
@@ -2419,20 +2419,28 @@ dns:
     - '+.msftncsi.com'
     - '+.stun.playstation.net'
     - '+.srv.nintendo.net'
-  default-nameserver:             # 只用于解析 DoH/DoT 域名，这里全是纯 IP
+  # 引导 DNS：只用于解析下面 DoH 服务器的域名，必须是纯 IP
+  default-nameserver:
     - 223.5.5.5
     - 119.29.29.29
-  nameserver:                     # QX: server=223.5.5.5 / server=119.29.29.29
-    - 223.5.5.5
-    - 119.29.29.29
-  # 节点域名解析（国内加密 DNS）
+    - 114.114.114.114
+  # 主 DNS：加密 DoH（主流做法）
+  # 明文 UDP53 很容易被路由器/公司网/运营商劫持或直接丢弃，解析到过期或错误的 CDN 边缘 IP 时，
+  # 表现就是「直连能建连但不通，切全局/代理反而正常」——代理由节点远端解析，绕开了本地 DNS。
+  # 这里同时给出 DoH 域名和 DoH IP 两种写法：域名解析失败时仍可直连 IP 建 DoH。
+  nameserver:
+    - https://dns.alidns.com/dns-query
+    - https://doh.pub/dns-query
+    - https://223.5.5.5/dns-query
+    - https://1.12.12.12/dns-query
+  # 节点域名解析：同样走 DoH（节点域名被污染会导致整份订阅不可用）
   proxy-server-nameserver:
     - https://dns.alidns.com/dns-query
     - https://doh.pub/dns-query
-    - 223.5.5.5
+    - https://223.5.5.5/dns-query
   nameserver-policy:
     # Google 下载/更新走国内 CDN
-    '+.dl.google.com': [223.5.5.5, 119.29.29.29]
-    '+.dl.l.google.com': [223.5.5.5, 119.29.29.29]
-    '+.update.googleapis.com': [223.5.5.5, 119.29.29.29]
-    '+.clientservices.googleapis.com': [223.5.5.5, 119.29.29.29]
+    '+.dl.google.com': [https://dns.alidns.com/dns-query, https://doh.pub/dns-query]
+    '+.dl.l.google.com': [https://dns.alidns.com/dns-query, https://doh.pub/dns-query]
+    '+.update.googleapis.com': [https://dns.alidns.com/dns-query, https://doh.pub/dns-query]
+    '+.clientservices.googleapis.com': [https://dns.alidns.com/dns-query, https://doh.pub/dns-query]

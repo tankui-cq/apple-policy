@@ -26,6 +26,9 @@
 - 一个订阅同时只能挂一个覆写：选了「自定义覆写」就不会再挂「内置-覆写」。挂了自定义覆写后，
   **App「核心设置-DNS」里的设置不再写入最终配置**（源码 `defaultConfigNoOverwrite()` 里 `DNS: null`），
   所以 DNS 写在本文件的 `dns:` 段。
+- DNS 用**加密 DoH**（阿里 + DNSPod，另附 DoH-IP 兜底），不再用明文 UDP53。明文 DNS 被路由器/公司网/
+  运营商劫持或丢弃时，会解析到过期/错误的 CDN 边缘 IP：表现为「规则判直连、能建连但页面不通，
+  切全局/代理反而正常」（代理由节点远端解析）。这是配置层面能根除的一类问题，不需要逐个站点加规则。
 
 ## 导入步骤
 
@@ -114,7 +117,7 @@ python qx2clash.py https://cdn.jsdelivr.net/gh/tankui-cq/apple-policy@main/Custo
 - 改自定义规则：直接改 `# >>> GENERATED:CUSTOM` 段（或改仓库里的 `Custom.list` 再跑一次脚本），
   然后重进 Clash Mi 更新覆写即可 —— 和 QX 里「改 Custom.list + 更新配置」的流程一致。
 - 把覆写文件推到仓库后用「添加配置链接」挂载：
-  `https://cdn.jsdelivr.net/gh/tankui-cq/apple-policy@v20261125-2/ClashMi/clashmi-override.yaml`
+  `https://cdn.jsdelivr.net/gh/tankui-cq/apple-policy@v20261126-1/ClashMi/clashmi-override.yaml`
   ⚠️ jsdelivr 的 `@main` 分支别名会缓存约 12 小时，`purge.jsdelivr.net` 也刷不掉别名解析；
   用 **tag**（或 pinned commit）URL 才能立即拿到新版本。每次改完配置会打一个新 tag。
 - **iOS 内存**：官方 FAQ 提到 iOS 有内存上限，规则太多会「连上就断」。这里已经把最大的一份（ChinaIPs 1.9 万条）
